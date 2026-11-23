@@ -327,8 +327,8 @@ class DataAgent(AutoPilot):
       return control
 
   def augment_camera(self, sensors):
-    # Update dummy vehicle
-    if self.initialized:
+    # Update dummy vehicle (only used by the augmented BEV, which RGB_ONLY does not build)
+    if self.initialized and not RGB_ONLY:
       # We are still rendering the map for the current frame, so we need to use the translation from the last frame.
       last_translation = self.augmentation_translation
       last_rotation = self.augmentation_rotation
