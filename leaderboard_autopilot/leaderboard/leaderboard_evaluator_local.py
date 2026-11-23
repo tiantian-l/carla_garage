@@ -23,6 +23,7 @@ import signal
 import socket
 import numpy as np
 import torch
+import carla
 
 from srunner.scenariomanager.carla_data_provider import *
 from srunner.scenariomanager.timer import GameTime
@@ -233,6 +234,12 @@ class LeaderboardEvaluator(object):
         self.world.apply_settings(settings)
 
         self.world.reset_all_traffic_lights()
+        if int(os.environ.get('ALL_GREEN', 0)) == 1:
+            # E17 paired junction data (safedrive-vla): every traffic light green and frozen, as in CARLA-F
+            for light in self.world.get_actors().filter('traffic.traffic_light*'):
+                light.set_state(carla.TrafficLightState.Green)
+                light.freeze(True)
+            self.world.tick()
         CarlaDataProvider.set_client(self.client)
         CarlaDataProvider.set_traffic_manager_port(self.traffic_manager_port)
         CarlaDataProvider.set_world(self.world)

@@ -400,8 +400,9 @@ class RouteScenario(BasicScenario):
         # register var
         self.scenario_triggerer = scenario_triggerer
 
-        # Add the Background Activity
-        behavior.add_child(BackgroundBehavior(self.ego_vehicles[0], self.route, name="BackgroundActivity"))
+        # Add the Background Activity (NO_BACKGROUND=1: none, E17 paired junction data in safedrive-vla)
+        if int(os.environ.get('NO_BACKGROUND', 0)) != 1:
+            behavior.add_child(BackgroundBehavior(self.ego_vehicles[0], self.route, name="BackgroundActivity"))
 
         behavior.add_children(scenario_behaviors)
         return behavior
