@@ -26,7 +26,7 @@ from agents.navigation.local_planner import RoadOption
 from srunner.scenarioconfigs.scenario_configuration import ActorConfigurationData
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import ScenarioTriggerer, Idle
+from srunner.scenariomanager.scenarioatomics.atomic_behaviors import ScenarioTriggerer, Idle, TrafficLightFreezer
 from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import WaitForBlackboardVariable
 from srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTest,
                                                                      InRouteTest,
@@ -89,6 +89,19 @@ class RouteScenario(BasicScenario):
         ego_vehicle = self._spawn_ego_vehicle()
         if ego_vehicle is None:
             raise ValueError("Shutting down, couldn't spawn the ego vehicle")
+
+        # ALL_GREEN=1 (E17 paired junction data, safedrive-vla): every traffic light green for the whole route, as the
+        # CARLA-F evaluator (Bench2Drive route_scenario force_all_green_traffic_lights): after the ego is spawned (Town12
+        # is a large map: lights near the route are not loaded before that, trial 2267745 j19029 waited 14 s at red),
+        # green + very long phase times now, and a TrafficLightFreezer in the behavior tree.
+        self._all_green_lights = {}
+        if int(os.environ.get('ALL_GREEN', 0)) == 1:
+            for light in self.world.get_actors().filter('*traffic_light*'):
+                self._all_green_lights[light] = carla.TrafficLightState.Green
+                light.set_state(carla.TrafficLightState.Green)
+                light.set_green_time(100000.0)
+                light.set_yellow_time(100000.0)
+                light.set_red_time(100000.0)
 
         if debug_mode>0:
             self._draw_waypoints(self.route, vertical_shift=0.1, size=0.1, downsample=10)
@@ -399,6 +412,9 @@ class RouteScenario(BasicScenario):
 
         # register var
         self.scenario_triggerer = scenario_triggerer
+
+        if getattr(self, '_all_green_lights', None):
+            behavior.add_child(TrafficLightFreezer(self._all_green_lights, duration=100000, name="ForceAllGreenTrafficLights"))
 
         # Add the Background Activity (NO_BACKGROUND=1: none, E17 paired junction data in safedrive-vla)
         if int(os.environ.get('NO_BACKGROUND', 0)) != 1:
