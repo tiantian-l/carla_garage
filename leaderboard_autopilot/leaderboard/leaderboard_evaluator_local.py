@@ -235,10 +235,15 @@ class LeaderboardEvaluator(object):
 
         self.world.reset_all_traffic_lights()
         if int(os.environ.get('ALL_GREEN', 0)) == 1:
-            # E17 paired junction data (safedrive-vla): every traffic light green and frozen, as in CARLA-F
-            for light in self.world.get_actors().filter('traffic.traffic_light*'):
+            # E17 paired junction data (safedrive-vla): every traffic light green for the whole route, the way the
+            # CARLA-F evaluator does it (Bench2Drive route_scenario force_all_green_traffic_lights): green state and
+            # very long green / yellow / red times. No freeze(): it freezes ALL lights of the town at once, so the
+            # lights after the first one stayed in their current (possibly red) state (trial 2267583, Town12 j19029).
+            for light in self.world.get_actors().filter('*traffic_light*'):
                 light.set_state(carla.TrafficLightState.Green)
-                light.freeze(True)
+                light.set_green_time(100000.0)
+                light.set_yellow_time(100000.0)
+                light.set_red_time(100000.0)
             self.world.tick()
         CarlaDataProvider.set_client(self.client)
         CarlaDataProvider.set_traffic_manager_port(self.traffic_manager_port)
